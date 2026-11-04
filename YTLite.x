@@ -412,6 +412,15 @@ void addEndTime(YTPlayerViewController *self, YTSingleVideoController *video, YT
     }
 }
 
+void loopPlayback(YTPlayerViewController *self, YTSingleVideoController *video, YTSingleVideoTime *time) {
+    if (!ytlBool(@"loopButton")) return;
+    if (video.totalMediaTime > 0.5 && floor(time.time) >= floor(video.totalMediaTime)) {
+        if ([video respondsToSelector:@selector(seekToTime:)]) {
+            [video performSelector:@selector(seekToTime:) withObject:@0.0];
+        }
+    }
+}
+
 void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video, YTSingleVideoTime *time) {
     if (!ytlBool(@"autoSkipShorts")) return;
 
@@ -536,6 +545,7 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
 
     addEndTime(self, video, time);
     autoSkipShorts(self, video, time);
+    loopPlayback(self, video, time);
 }
 
 - (void)potentiallyMutatedSingleVideo:(YTSingleVideoController *)video currentVideoTimeDidChange:(YTSingleVideoTime *)time {
@@ -543,6 +553,7 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
 
     addEndTime(self, video, time);
     autoSkipShorts(self, video, time);
+    loopPlayback(self, video, time);
 }
 %end
 
@@ -751,6 +762,8 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
 %end
 
 %hook YTColdConfig
+- (BOOL)isSharePlayAvailable { return ytlBool(@"noSharePlayPrompt") ? NO : %orig; }
+- (BOOL)enableSharePlay { return ytlBool(@"noSharePlayPrompt") ? NO : %orig; }
 - (BOOL)iosEnableVideoPlayerScrubber { return ytlBool(@"shortsProgress") ? YES : NO; }
 - (BOOL)mobileShortsTabInlined { return ytlBool(@"shortsProgress") ? YES : NO; }
 - (BOOL)iosUseSystemVolumeControlInFullscreen { return ytlBool(@"stockVolumeHUD") ? YES : NO; }
