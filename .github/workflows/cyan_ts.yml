@@ -52,8 +52,8 @@ on:
         default: false
 
       tweak_version:
-        description: "The version of the tweak to use. Enter the version manually from dayanch96/YTLite/releases or leave default"
-        default: "6.0"
+        description: "Custom Tweak Version"
+        default: "1.0.0"
         required: true
         type: string
 

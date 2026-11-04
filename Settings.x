@@ -144,6 +144,7 @@ static NSString *GetCacheSize() {
         NSArray <YTSettingsSectionItem *> *rows = @[
             [self switchWithTitle:@"RemoveCast" key:@"noCast"],
             [self switchWithTitle:@"RemoveNotifications" key:@"noNotifsButton"],
+            [self switchWithTitle:@"RemoveMessages" key:@"noMessagesButton"],
             [self switchWithTitle:@"RemoveSearch" key:@"noSearchButton"],
             [self switchWithTitle:@"RemoveVoiceSearch" key:@"noVoiceSearchButton"]
         ];
@@ -206,6 +207,7 @@ static NSString *GetCacheSize() {
                 [self switchWithTitle:@"Miniplayer" key:@"miniplayer"],
                 [self switchWithTitle:@"PortraitFullscreen" key:@"portraitFullscreen"],
                 [self switchWithTitle:@"CopyWithTimestamp" key:@"copyWithTimestamp"],
+                [self switchWithTitle:@"PreserveSpeed" key:@"preserveSpeed"],
                 [self switchWithTitle:@"DisableAutoplay" key:@"disableAutoplay"],
                 [self switchWithTitle:@"DisableAutoCaptions" key:@"disableAutoCaptions"],
                 [self switchWithTitle:@"NoContentWarning" key:@"noContentWarning"],
@@ -242,6 +244,7 @@ static NSString *GetCacheSize() {
                 [self switchWithTitle:@"ShortsOnlyMode" key:@"shortsOnlyMode"],
                 [self switchWithTitle:@"AutoSkipShorts" key:@"autoSkipShorts"],
                 [self switchWithTitle:@"HideShorts" key:@"hideShorts"],
+                [self switchWithTitle:@"HideShortsSubscribe" key:@"hideShortsSubscribe"],
                 [self switchWithTitle:@"ShortsProgress" key:@"shortsProgress"],
                 [self switchWithTitle:@"PinchToFullscreenShorts" key:@"pinchToFullscreenShorts"],
                 [self switchWithTitle:@"ShortsToRegular" key:@"shortsToRegular"],
@@ -311,6 +314,12 @@ static NSString *GetCacheSize() {
                 [self switchWithTitle:@"CommentManager" key:@"commentManager"],
                 [self switchWithTitle:@"FixAlbums" key:@"fixAlbums"],
                 [self switchWithTitle:@"NativeShare" key:@"nativeShare"],
+                [self switchWithTitle:@"RemovePlaylists" key:@"removePlaylists"],
+                [self switchWithTitle:@"KeepPlaylistsInSubscriptions" key:@"keepPlaylistsInSubscriptions"],
+                [self switchWithTitle:@"RemoveUpcomingLives" key:@"removeUpcomingLives"],
+                [self switchWithTitle:@"RemoveMembersOnly" key:@"removeMembersOnly"],
+                [self switchWithTitle:@"RemovePlayables" key:@"removePlayables"],
+                [self switchWithTitle:@"RemoveMoreTopics" key:@"removeMoreTopics"],
                 [self switchWithTitle:@"RemovePlayNext" key:@"removePlayNext"],
                 [self switchWithTitle:@"RemoveDownloadMenu" key:@"removeDownloadMenu"],
                 [self switchWithTitle:@"RemoveWatchLaterMenu" key:@"removeWatchLaterMenu"],
@@ -616,7 +625,6 @@ static NSString *GetCacheSize() {
 
     [sectionItems addObject:sources];
 
-    [sectionItems addObject:support];
 
     [sectionItems addObject:version];
 

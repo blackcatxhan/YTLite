@@ -126,6 +126,7 @@ static UIImage *YTImageNamed(NSString *imageName) {
     for (UIView *subview in self.subviews) {
         if (ytlBool(@"noVoiceSearchButton") && [subview.accessibilityLabel isEqualToString:NSLocalizedString(@"search.voice.access", nil)]) subview.hidden = YES;
         if (ytlBool(@"noCast") && [subview.accessibilityIdentifier isEqualToString:@"id.mdx.playbackroute.button"]) subview.hidden = YES;
+        if (ytlBool(@"noMessagesButton") && ([subview.accessibilityIdentifier containsString:@"message"] || [subview.accessibilityLabel containsString:@"Message"] || [subview.accessibilityLabel isEqualToString:LOC(@"Messages")])) subview.hidden = YES;
     }
 }
 %end
@@ -708,12 +709,19 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
         if ([cell respondsToSelector:@selector(node)]) {
             NSString *idToRemove = [[cell node] accessibilityIdentifier];
             if ([idToRemove isEqualToString:@"statement_banner.view"] ||
-                (([idToRemove isEqualToString:@"eml.shorts-grid"] || [idToRemove isEqualToString:@"eml.shorts-shelf"]) && ytlBool(@"hideShorts"))) {
+                (([idToRemove isEqualToString:@"eml.shorts-grid"] || [idToRemove isEqualToString:@"eml.shorts-shelf"]) && ytlBool(@"hideShorts")) ||
+                ([idToRemove containsString:@"playable"] && ytlBool(@"removePlayables")) ||
+                ([idToRemove containsString:@"members-only"] && ytlBool(@"removeMembersOnly")) ||
+                ([idToRemove containsString:@"upcoming"] && ytlBool(@"removeUpcomingLives")) ||
+                ([idToRemove containsString:@"more-topics"] && ytlBool(@"removeMoreTopics")) ||
+                (([idToRemove containsString:@"playlist"] || [idToRemove containsString:@"mix"]) && ytlBool(@"removePlaylists"))) {
                 [self removeCellsAtIndexPath:indexPath];
             }
         }
     } else if (([cell isKindOfClass:objc_lookUpClass("YTReelShelfCell")] && ytlBool(@"hideShorts")) ||
-        ([cell isKindOfClass:objc_lookUpClass("YTHorizontalCardListCell")] && ytlBool(@"noContinueWatching"))) {
+        ([cell isKindOfClass:objc_lookUpClass("YTHorizontalCardListCell")] && (ytlBool(@"noContinueWatching") || ytlBool(@"removeMoreTopics"))) ||
+        ([cell isKindOfClass:objc_lookUpClass("YTPlayableShelfCell")] && ytlBool(@"removePlayables")) ||
+        ([cell isKindOfClass:objc_lookUpClass("YTPlaylistCell")] && ytlBool(@"removePlaylists"))) {
         [self removeCellsAtIndexPath:indexPath];
     } return %orig;
 }
@@ -770,6 +778,8 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
 - (void)setShareButton:(id)arg1 { if (!ytlBool(@"hideShortsShare")) %orig; }
 - (void)setNativePivotButton:(id)arg1 { if (!ytlBool(@"hideShortsAvatars")) %orig; }
 - (void)setPivotButtonElementRenderer:(id)arg1 { if (!ytlBool(@"hideShortsAvatars")) %orig; }
+- (void)setSubscribeButton:(id)arg1 { if (!ytlBool(@"hideShortsSubscribe")) %orig; }
+- (void)setSubscribeButtonElementRenderer:(id)arg1 { if (!ytlBool(@"hideShortsSubscribe")) %orig; }
 %end
 
 %hook YTReelHeaderView
@@ -798,6 +808,8 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
 - (void)setActionElement:(id)renderer { if (!ytlBool(@"hideShortsPromoCards")) %orig; }
 - (void)setBadgeRenderer:(id)renderer { if (!ytlBool(@"hideShortsThanks")) %orig; }
 - (void)setMultiFormatLinkElementRenderer:(id)renderer { if (!ytlBool(@"hideShortsSource")) %orig; }
+- (void)setSubscribeButton:(id)renderer { if (!ytlBool(@"hideShortsSubscribe")) %orig; }
+- (void)setSubscribeButtonElementRenderer:(id)renderer { if (!ytlBool(@"hideShortsSubscribe")) %orig; }
 %end
 
 static BOOL isOverlayShown = YES;
@@ -1314,7 +1326,9 @@ static void manageSpeedmasterYTLite(UILongPressGestureRecognizer *gesture, YTMai
     }
 
     else if (gesture.state == UIGestureRecognizerStateEnded) {
-        [delegate setPlaybackRate:rateBeforeSpeedmaster];
+        if (!ytlBool(@"preserveSpeed")) {
+            [delegate setPlaybackRate:rateBeforeSpeedmaster];
+        }
         [edu setVisible:NO];
     }
 }
@@ -1386,18 +1400,8 @@ static NSURL *newCoverURL(NSURL *originalURL) {
         ytlSetBool(NO, @"reExplore");
     }
 
-    if (!ytlBool(@"advancedMode") && !ytlBool(@"advancedModeReminder")) {
-        ytlSetBool(YES, @"advancedModeReminder");
-
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            YTAlertView *alertView = [%c(YTAlertView) confirmationDialogWithAction:^{
-                ytlSetBool(YES, @"advancedMode");
-            }
-            actionTitle:LOC(@"Yes")
-            cancelTitle:LOC(@"No")];
-            alertView.title = @"YTLite";
-            alertView.subtitle = [NSString stringWithFormat:LOC(@"AdvancedModeReminder"), @"YTLite", LOC(@"Version"), LOC(@"Advanced")];
-            [alertView show];
-        });
+    // Full features unlocked like 5.2b4 without login prompt or reminder alert
+    if (!ytlBool(@"advancedMode")) {
+        ytlSetBool(YES, @"advancedMode");
     }
 }

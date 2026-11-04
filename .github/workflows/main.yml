@@ -52,8 +52,8 @@ on:
         type: string
 
       tweak_version:
-        description: "The version of the tweak to use. Enter the version manually from dayanch96/YTLite/releases or leave default"
-        default: "6.0"
+        description: "Custom Tweak Version"
+        default: "1.0.0"
         required: true
         type: string
 
@@ -71,7 +71,7 @@ on:
 
       info_note:
         description: "TIP: Learn more about integrations in the README via the link below"
-        default: "https://github.com/dayanch96/YTLite#tweak-integration-details"
+        default: "https://github.com/${{ github.repository }}#tweak-integration-details"
         type: string
         required: false
 
