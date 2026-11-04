@@ -135,6 +135,20 @@ static NSString *GetCacheSize() {
 
     [sectionItems addObject:general];
 
+    YTSettingsSectionItem *downloads = [YTSettingsSectionItemClass itemWithTitle:LOC(@"DownloadManager")
+        accessibilityIdentifier:@"YTLiteSectionItem"
+        detailTextBlock:^NSString *() {
+            return @"‣";
+        }
+        selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
+            YTPDownloadsVC *downloadsVC = [[YTPDownloadsVC alloc] init];
+            UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:downloadsVC];
+            [[%c(YTUIUtils) topViewControllerForPresenting] presentViewController:nav animated:YES completion:nil];
+            return YES;
+        }];
+
+    [sectionItems addObject:downloads];
+
     YTSettingsSectionItem *navbar = [YTSettingsSectionItemClass itemWithTitle:LOC(@"Navbar")
     accessibilityIdentifier:@"YTLiteSectionItem"
     detailTextBlock:^NSString *() {

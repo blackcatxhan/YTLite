@@ -4,6 +4,9 @@
 #import "Utils/NSBundle+YTLite.h"
 #import "Utils/YTLUserDefaults.h"
 #import "Utils/Reachability.h"
+#import "Utils/YTPPlayerVC.h"
+#import "Utils/YTPDownloader.h"
+#import "Utils/YTPDownloadsVC.h"
 #import "YouTubeHeaders.h"
 
 #define LOC(key) [NSBundle.ytl_defaultBundle localizedStringForKey:key value:nil table:nil]
