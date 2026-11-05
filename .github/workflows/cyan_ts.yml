@@ -19,37 +19,37 @@ on:
         description: "Integrate YouPiP"
         type: boolean
         required: true
-        default: false
+        default: true
 
       enable_ytuhd:
         description: "Integrate YTUHD"
         type: boolean
         required: true
-        default: false
+        default: true
 
       enable_yq:
         description: "Integrate YouQuality"
         type: boolean
         required: true
-        default: false
+        default: true
 
       enable_ryd:
         description: "Integrate Return YouTube Dislikes"
         type: boolean
         required: true
-        default: false
+        default: true
 
       enable_ytabc:
         description: "Integrate YTABConfig"
         type: boolean
         required: true
-        default: false
+        default: true
 
       enable_demc:
         description: "Integrate DontEatMyContent"
         type: boolean
         required: true
-        default: false
+        default: true
 
       tweak_version:
         description: "Custom Tweak Version"

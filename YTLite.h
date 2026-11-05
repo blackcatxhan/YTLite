@@ -10,7 +10,7 @@
 #import "Utils/YTPDownloadsVC.h"
 #import "YouTubeHeaders.h"
 
-@interface YTSettingsGroupData : NSObject
+@interface YTSettingsGroupData (YTLite)
 @property (nonatomic, readonly, strong) NSString *title;
 @property (nonatomic, readonly, assign) NSUInteger type;
 @property (nonatomic, readonly, strong) NSArray <NSNumber *> *orderedCategories;
@@ -18,10 +18,6 @@
 - (instancetype)initWithGroupType:(NSUInteger)groupType;
 - (NSString *)titleForSettingGroupType:(NSUInteger)groupType;
 - (NSArray <NSNumber *> *)orderedCategoriesForGroupType:(NSUInteger)groupType;
-@end
-
-@interface YTIIcon : NSObject
-@property (nonatomic, assign, readwrite) int iconType;
 @end
 
 #define LOC(key) [NSBundle.ytl_defaultBundle localizedStringForKey:key value:nil table:nil]
@@ -49,6 +45,8 @@
 - (YTSettingsSectionItem *)switchWithTitle:(NSString *)title key:(NSString *)key;
 - (YTSettingsSectionItem *)linkWithTitle:(NSString *)title description:(NSString *)description link:(NSString *)link;
 - (UIImage *)resizedImageNamed:(NSString *)iconName;
+- (YTSettingsViewController *)ytl_settingsViewController;
+- (void)updateYTLiteSectionWithEntry:(id)entry;
 @end
 
 @interface YTLightweightQTMButton ()

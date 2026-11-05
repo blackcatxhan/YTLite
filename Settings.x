@@ -2,6 +2,7 @@
 
 @interface YTSettingsSectionItemManager (YTLite)
 - (void)updateYTLiteSectionWithEntry:(id)entry;
+- (YTSettingsViewController *)ytl_settingsViewController;
 @end
 
 static const NSInteger YTLiteSection = 789;
@@ -100,7 +101,7 @@ static NSString *GetCacheSize() {
 }
 %end
 
-static void YTLitePushPicker(id manager, YTSettingsPickerViewController *picker) {
+static void YTLitePushPicker(YTSettingsSectionItemManager *manager, YTSettingsPickerViewController *picker) {
     UIViewController *targetVC = nil;
     if ([manager respondsToSelector:@selector(ytl_settingsViewController)]) {
         targetVC = [manager ytl_settingsViewController];
