@@ -22,3 +22,6 @@
 #import "../YouTubeHeader/ASCollectionElement.h"
 #import "../YouTubeHeader/ASCollectionView.h"
 #import "../YouTubeHeader/ELMNodeController.h"
+#if __has_include("../YouTubeHeader/YTSettingsGroupData.h")
+#import "../YouTubeHeader/YTSettingsGroupData.h"
+#endif

@@ -53,7 +53,7 @@ static NSString *GetCacheSize() {
 
 - (NSArray <NSNumber *> *)orderedCategoriesForGroupType:(NSUInteger)type {
     if ([%c(YTSettingsGroupData) respondsToSelector:@selector(tweaks)]) {
-        NSMutableArray *tweaks = [%c(YTSettingsGroupData) tweaks];
+        NSMutableArray *tweaks = [(id)%c(YTSettingsGroupData) tweaks];
         if (tweaks && ![tweaks containsObject:@(YTLiteSection)]) {
             [tweaks insertObject:@(YTLiteSection) atIndex:0];
         }
@@ -831,7 +831,7 @@ static void YTLitePushPicker(YTSettingsSectionItemManager *manager, YTSettingsPi
     %init;
     [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidFinishLaunchingNotification object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
         if ([%c(YTSettingsGroupData) respondsToSelector:@selector(tweaks)]) {
-            NSMutableArray *tweaks = [%c(YTSettingsGroupData) tweaks];
+            NSMutableArray *tweaks = [(id)%c(YTSettingsGroupData) tweaks];
             if (tweaks && ![tweaks containsObject:@(YTLiteSection)]) {
                 [tweaks insertObject:@(YTLiteSection) atIndex:0];
             }

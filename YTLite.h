@@ -10,14 +10,19 @@
 #import "Utils/YTPDownloadsVC.h"
 #import "YouTubeHeaders.h"
 
-@interface YTSettingsGroupData (YTLite)
+#if !__has_include("../YouTubeHeader/YTSettingsGroupData.h")
+@interface YTSettingsGroupData : NSObject
 @property (nonatomic, readonly, strong) NSString *title;
 @property (nonatomic, readonly, assign) NSUInteger type;
 @property (nonatomic, readonly, strong) NSArray <NSNumber *> *orderedCategories;
-+ (NSMutableArray <NSNumber *> *)tweaks;
 - (instancetype)initWithGroupType:(NSUInteger)groupType;
 - (NSString *)titleForSettingGroupType:(NSUInteger)groupType;
 - (NSArray <NSNumber *> *)orderedCategoriesForGroupType:(NSUInteger)groupType;
+@end
+#endif
+
+@interface YTSettingsGroupData (YTLite)
++ (NSMutableArray <NSNumber *> *)tweaks;
 @end
 
 #define LOC(key) [NSBundle.ytl_defaultBundle localizedStringForKey:key value:nil table:nil]
