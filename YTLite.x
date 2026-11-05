@@ -641,6 +641,7 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
 %hook YTDefaultSheetController
 - (void)addAction:(YTActionSheetAction *)action {
     NSString *identifier = [action valueForKey:@"_accessibilityIdentifier"];
+    NSString *title = [action valueForKey:@"_title"];
 
     NSDictionary *actionsToRemove = @{
         @"7": @(ytlBool(@"removeDownloadMenu")),
@@ -652,9 +653,20 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
         @"58": @(ytlBool(@"removeReportMenu"))
     };
 
-    if (![actionsToRemove[identifier] boolValue]) {
-        %orig;
+    if ([actionsToRemove[identifier] boolValue]) {
+        return;
     }
+
+    if (title && [title isKindOfClass:[NSString class]]) {
+        NSString *lowerTitle = [title lowercaseString];
+        if (ytlBool(@"removeRemixMenu") && [lowerTitle containsString:@"remix"]) return;
+        if (ytlBool(@"removeYTMMenu") && ([lowerTitle containsString:@"music"] || [lowerTitle containsString:@"ytm"])) return;
+        if (ytlBool(@"removeFeedbackMenu") && [lowerTitle containsString:@"feedback"]) return;
+        if (ytlBool(@"removePlayLast") && ([lowerTitle containsString:@"queue"] || [lowerTitle containsString:@"play last"])) return;
+        if (ytlBool(@"removePlayOnDifferent") && [lowerTitle containsString:@"different device"]) return;
+    }
+
+    %orig;
 }
 %end
 
@@ -693,15 +705,47 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
         ASCellNode *node = [element node];
         ASNodeController *nodeController = [node controller];
 
-        if (ytlBool(@"noPlayerRemixButton") && findCell(nodeController, @[@"id.video.remix.button"])) {
+        if ((ytlBool(@"noPlayerRemixButton") || ytlBool(@"playerNoRemix")) && findCell(nodeController, @[@"id.video.remix.button", @"remix"])) {
             return CGSizeZero;
         }
 
-        if (ytlBool(@"noPlayerClipButton") && findCell(nodeController, @[@"clip_button.eml"])) {
+        if ((ytlBool(@"noPlayerClipButton") || ytlBool(@"playerNoClip")) && findCell(nodeController, @[@"clip_button.eml", @"clip"])) {
             return CGSizeZero;
         }
 
-        if (ytlBool(@"noPlayerDownloadButton") && findCell(nodeController, @[@"id.ui.add_to.offline.button"])) {
+        if ((ytlBool(@"noPlayerDownloadButton") || ytlBool(@"playerNoDownload")) && findCell(nodeController, @[@"id.ui.add_to.offline.button", @"download"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"playerNoThanks") && findCell(nodeController, @[@"id.video.thanks.button", @"thanks"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"playerNoHype") && findCell(nodeController, @[@"id.video.hype.button", @"hype"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"playerNoAsk") && findCell(nodeController, @[@"id.video.ask.button", @"ask"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"playerNoReport") && findCell(nodeController, @[@"id.video.report.button", @"report"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"playerNoSave") && findCell(nodeController, @[@"id.video.save.button", @"save", @"playlist"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"playerNoShare") && findCell(nodeController, @[@"id.video.share.button", @"share"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"playerNoStopAds") && findCell(nodeController, @[@"stop_ads", @"stopads"])) {
+            return CGSizeZero;
+        }
+
+        if (ytlBool(@"noSubUnderPlayer") && findCell(nodeController, @[@"subscribe_button", @"subscribe"])) {
             return CGSizeZero;
         }
     }
@@ -724,15 +768,19 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
                 ([idToRemove containsString:@"playable"] && ytlBool(@"removePlayables")) ||
                 ([idToRemove containsString:@"members-only"] && ytlBool(@"removeMembersOnly")) ||
                 ([idToRemove containsString:@"upcoming"] && ytlBool(@"removeUpcomingLives")) ||
+                ([idToRemove containsString:@"live"] && ytlBool(@"removeLiveVids")) ||
                 ([idToRemove containsString:@"more-topics"] && ytlBool(@"removeMoreTopics")) ||
+                ([idToRemove containsString:@"mix"] && ytlBool(@"removeMixPlaylists")) ||
                 (([idToRemove containsString:@"playlist"] || [idToRemove containsString:@"mix"]) && ytlBool(@"removePlaylists"))) {
                 [self removeCellsAtIndexPath:indexPath];
             }
         }
     } else if (([cell isKindOfClass:objc_lookUpClass("YTReelShelfCell")] && ytlBool(@"hideShorts")) ||
-        ([cell isKindOfClass:objc_lookUpClass("YTHorizontalCardListCell")] && (ytlBool(@"noContinueWatching") || ytlBool(@"removeMoreTopics"))) ||
+        ([cell isKindOfClass:objc_lookUpClass("YTHorizontalCardListCell")] && (ytlBool(@"noContinueWatching") || ytlBool(@"removeMoreTopics") || ytlBool(@"removeHorizontalFeeds"))) ||
         ([cell isKindOfClass:objc_lookUpClass("YTPlayableShelfCell")] && ytlBool(@"removePlayables")) ||
-        ([cell isKindOfClass:objc_lookUpClass("YTPlaylistCell")] && ytlBool(@"removePlaylists"))) {
+        ([cell isKindOfClass:objc_lookUpClass("YTPostCell")] && ytlBool(@"removeCommunityPosts")) ||
+        ([cell isKindOfClass:objc_lookUpClass("YTBackstagePostCell")] && ytlBool(@"removeCommunityPosts")) ||
+        ([cell isKindOfClass:objc_lookUpClass("YTPlaylistCell")] && (ytlBool(@"removePlaylists") || ytlBool(@"removeMixPlaylists")))) {
         [self removeCellsAtIndexPath:indexPath];
     } return %orig;
 }
@@ -793,6 +841,10 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
 - (void)setPivotButtonElementRenderer:(id)arg1 { if (!ytlBool(@"hideShortsAvatars")) %orig; }
 - (void)setSubscribeButton:(id)arg1 { if (!ytlBool(@"hideShortsSubscribe")) %orig; }
 - (void)setSubscribeButtonElementRenderer:(id)arg1 { if (!ytlBool(@"hideShortsSubscribe")) %orig; }
+- (void)setAudioIndicatorView:(id)arg1 { if (!ytlBool(@"hideShortsAudio")) %orig; }
+- (void)setMuteButton:(id)arg1 { if (!ytlBool(@"hideShortsMute")) %orig; }
+- (void)setAudioButton:(id)arg1 { if (!ytlBool(@"hideShortsAudioButton")) %orig; }
+- (void)setDownloadButton:(id)arg1 { if (!ytlBool(@"hideShortsDownload")) %orig; }
 %end
 
 %hook YTReelHeaderView
@@ -1406,6 +1458,68 @@ static NSURL *newCoverURL(NSURL *originalURL) {
 //     return %orig(newCoverURL(arg1), arg2, arg3, arg4, arg5);
 // }
 // %end
+
+
+// Additional Theme, Audio and Playback hooks
+%hook YTPageStyleController
++ (NSInteger)pageStyle {
+    if (ytlBool(@"oledTheme")) return 1;
+    return %orig;
+}
+%end
+
+%hook YTWatchView
+- (void)setBackgroundColor:(UIColor *)color {
+    if (ytlBool(@"oledTheme")) {
+        %orig([UIColor blackColor]);
+        return;
+    }
+    %orig;
+}
+%end
+
+%hook YTCinematicContainerView
+- (void)layoutSubviews {
+    %orig;
+    if (ytlBool(@"disableAmbientMode")) {
+        self.hidden = YES;
+    }
+}
+%end
+
+%hook YTIPlayerConfigModel
+- (BOOL)isStableVolumeEnabled {
+    if (ytlBool(@"audioDRC")) return YES;
+    return %orig;
+}
+%end
+
+%hook YTColdConfig
+- (BOOL)enableVolumeKeyUnmuteInFeed {
+    if (ytlBool(@"suppressUnmute")) return NO;
+    return %orig;
+}
+%end
+
+%hook YTUIUtils
++ (BOOL)openURL:(NSURL *)url {
+    if (ytlBool(@"noLinkTracking")) {
+        NSString *urlString = url.absoluteString;
+        if ([urlString containsString:@"si="] || [urlString containsString:@"pp="] || [urlString containsString:@"feature="]) {
+            NSURLComponents *components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
+            NSMutableArray *filtered = [NSMutableArray array];
+            for (NSURLQueryItem *item in components.queryItems) {
+                if (![item.name isEqualToString:@"si"] && ![item.name isEqualToString:@"pp"] && ![item.name isEqualToString:@"feature"]) {
+                    [filtered addObject:item];
+                }
+            }
+            components.queryItems = filtered;
+            if (components.URL) url = components.URL;
+        }
+    }
+    return %orig(url);
+}
+%end
 
 %ctor {
     if (ytlBool(@"shortsOnlyMode") && (ytlBool(@"removeShorts") || ytlBool(@"reExplore"))) {
