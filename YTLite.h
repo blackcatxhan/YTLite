@@ -351,3 +351,17 @@
 + (instancetype)sheetControllerWithMessage:(NSString *)message delegate:(id)delegate parentResponder:(id)parentResponder;
 + (instancetype)sheetControllerWithMessage:(NSString *)message subMessage:(NSString *)subMessage delegate:(id)delegate parentResponder:(id)parentResponder;
 @end
+
+@interface YTCinematicContainerView : UIView
+@end
+
+@interface YTWatchView : UIView
+@end
+
+@interface YTIPlayerConfigModel : NSObject
+- (BOOL)isStableVolumeEnabled;
+@end
+
+@interface YTColdConfig : NSObject
+- (BOOL)enableVolumeKeyUnmuteInFeed;
+@end

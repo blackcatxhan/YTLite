@@ -1482,7 +1482,7 @@ static NSURL *newCoverURL(NSURL *originalURL) {
 - (void)layoutSubviews {
     %orig;
     if (ytlBool(@"disableAmbientMode")) {
-        self.hidden = YES;
+        ((UIView *)self).hidden = YES;
     }
 }
 %end
