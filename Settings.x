@@ -39,6 +39,46 @@ static NSString *GetCacheSize() {
 }
 %end
 
+// Grouped Settings (CairoSettings & YouGroupSettings compatibility)
+%hook YTSettingsGroupData
+
++ (NSMutableArray <NSNumber *> *)tweaks {
+    NSMutableArray <NSNumber *> *tweaks = %orig;
+    if (tweaks && ![tweaks containsObject:@(YTLiteSection)]) {
+        [tweaks insertObject:@(YTLiteSection) atIndex:0];
+    }
+    return tweaks;
+}
+
+- (NSArray <NSNumber *> *)orderedCategoriesForGroupType:(NSUInteger)type {
+    if ([%c(YTSettingsGroupData) respondsToSelector:@selector(tweaks)]) {
+        NSMutableArray *tweaks = [%c(YTSettingsGroupData) tweaks];
+        if (tweaks && ![tweaks containsObject:@(YTLiteSection)]) {
+            [tweaks insertObject:@(YTLiteSection) atIndex:0];
+        }
+    }
+    NSArray *categories = %orig;
+    if ((type == 'psyt' || type == 1) && categories && ![categories containsObject:@(YTLiteSection)]) {
+        NSMutableArray *mutable = [categories mutableCopy];
+        [mutable insertObject:@(YTLiteSection) atIndex:0];
+        return mutable;
+    }
+    return categories;
+}
+
+- (NSArray <NSNumber *> *)orderedCategories {
+    if (self.type != 1 && self.type != 'psyt') return %orig;
+    NSArray *categories = %orig;
+    if (categories && ![categories containsObject:@(YTLiteSection)]) {
+        NSMutableArray *mutable = [categories mutableCopy];
+        [mutable insertObject:@(YTLiteSection) atIndex:0];
+        return mutable;
+    }
+    return categories;
+}
+
+%end
+
 %hook YTSettingsSectionController
 - (void)setSelectedItem:(NSUInteger)selectedItem {
     if (selectedItem != NSNotFound) %orig;
@@ -60,15 +100,67 @@ static NSString *GetCacheSize() {
 }
 %end
 
+static void YTLitePushPicker(id manager, YTSettingsPickerViewController *picker) {
+    UIViewController *targetVC = nil;
+    if ([manager respondsToSelector:@selector(ytl_settingsViewController)]) {
+        targetVC = [manager ytl_settingsViewController];
+    }
+    if (!targetVC && manager) {
+        @try { targetVC = [manager valueForKey:@"_dataDelegate"]; } @catch (NSException *e) {}
+        if (!targetVC) {
+            @try { targetVC = [manager valueForKey:@"_settingsViewControllerDelegate"]; } @catch (NSException *e) {}
+        }
+    }
+    if (targetVC && [targetVC respondsToSelector:@selector(pushViewController:)]) {
+        [(YTSettingsViewController *)targetVC pushViewController:picker];
+    } else if (targetVC.navigationController) {
+        [targetVC.navigationController pushViewController:picker animated:YES];
+    } else {
+        UIViewController *top = [%c(YTUIUtils) topViewControllerForPresenting];
+        if (top.navigationController) {
+            [top.navigationController pushViewController:picker animated:YES];
+        } else {
+            [top presentViewController:picker animated:YES completion:nil];
+        }
+    }
+}
+
 %hook YTSettingsSectionItemManager
+%new
+- (YTSettingsViewController *)ytl_settingsViewController {
+    YTSettingsViewController *vc = nil;
+    @try { vc = [self valueForKey:@"_dataDelegate"]; } @catch (NSException *e) {}
+    if (!vc) {
+        @try { vc = [self valueForKey:@"_settingsViewControllerDelegate"]; } @catch (NSException *e) {}
+    }
+    if (!vc) {
+        @try { vc = [self valueForKey:@"_delegate"]; } @catch (NSException *e) {}
+    }
+    if (!vc) {
+        unsigned int ivarCount = 0;
+        Ivar *ivars = class_copyIvarList([self class], &ivarCount);
+        for (unsigned int i = 0; i < ivarCount; i++) {
+            id val = object_getIvar(self, ivars[i]);
+            if ([val isKindOfClass:%c(YTSettingsViewController)]) {
+                vc = val;
+                break;
+            }
+        }
+        free(ivars);
+    }
+    return vc;
+}
+
 %new
 - (YTSettingsSectionItem *)switchWithTitle:(NSString *)title key:(NSString *)key {
     Class YTSettingsSectionItemClass = %c(YTSettingsSectionItem);
     Class YTAlertViewClass = %c(YTAlertView);
     NSString *titleDesc = [NSString stringWithFormat:@"%@Desc", title];
+    NSString *desc = LOC(titleDesc);
+    if ([desc isEqualToString:titleDesc]) desc = nil;
 
     YTSettingsSectionItem *item = [YTSettingsSectionItemClass switchItemWithTitle:LOC(title)
-    titleDescription:LOC(titleDesc)
+    titleDescription:desc
     accessibilityIdentifier:@"YTLiteSectionItem"
     switchOn:ytlBool(key)
     switchBlock:^BOOL(YTSettingsCell *cell, BOOL enabled) {
@@ -117,7 +209,7 @@ static NSString *GetCacheSize() {
 - (void)updateYTLiteSectionWithEntry:(id)entry {
     NSMutableArray *sectionItems = [NSMutableArray array];
     Class YTSettingsSectionItemClass = %c(YTSettingsSectionItem);
-    YTSettingsViewController *settingsViewController = [self valueForKey:@"_settingsViewControllerDelegate"];
+    YTSettingsViewController *settingsViewController = [self ytl_settingsViewController];
 
     YTSettingsSectionItem *space = [%c(YTSettingsSectionItem) itemWithTitle:nil accessibilityIdentifier:@"YTLiteSectionItem" detailTextBlock:nil selectBlock:nil];
 
@@ -138,7 +230,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"General") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:general];
@@ -161,7 +253,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"OledTheme") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:appearance];
@@ -194,7 +286,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Navbar") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:navbar];
@@ -223,7 +315,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Player") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:player];
@@ -248,7 +340,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Player.Actions") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:playerActions];
@@ -285,7 +377,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Overlay") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:overlay];
@@ -309,7 +401,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Player.Gestures") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:gestures];
@@ -349,7 +441,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Shorts") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:shorts];
@@ -369,7 +461,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Tabbar") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:tabbar];
@@ -399,7 +491,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Feed") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:feed];
@@ -426,7 +518,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"EnableSponsorBlock") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:sb];
@@ -462,7 +554,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Other") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:other];
@@ -483,7 +575,7 @@ static NSString *GetCacheSize() {
             for (NSUInteger i = 0; i < speedLabels.count; i++) {
                 NSString *title = speedLabels[i];
                 YTSettingsSectionItem *item = [YTSettingsSectionItemClass checkmarkItemWithTitle:title titleDescription:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
-                    [settingsViewController reloadData];
+                    [[self ytl_settingsViewController] reloadData];
                     ytlSetInt((int)arg1, @"speedIndex");
                     return YES;
                 }];
@@ -491,7 +583,7 @@ static NSString *GetCacheSize() {
             }
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"HoldToSpeed") pickerSectionTitle:nil rows:rows selectedItemIndex:ytlInt(@"speedIndex") parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:speed];
@@ -509,7 +601,7 @@ static NSString *GetCacheSize() {
             for (NSUInteger i = 0; i < speedLabels.count; i++) {
                 NSString *title = speedLabels[i];
                 YTSettingsSectionItem *item = [YTSettingsSectionItemClass checkmarkItemWithTitle:title titleDescription:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
-                    [settingsViewController reloadData];
+                    [[self ytl_settingsViewController] reloadData];
                     ytlSetInt((int)arg1, @"autoSpeedIndex");
                     return YES;
                 }];
@@ -517,7 +609,7 @@ static NSString *GetCacheSize() {
             }
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"DefaultPlaybackRate") pickerSectionTitle:nil rows:rows selectedItemIndex:ytlInt(@"autoSpeedIndex") parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:autoSpeed];
@@ -535,7 +627,7 @@ static NSString *GetCacheSize() {
             for (NSUInteger i = 0; i < qualityLabels.count; i++) {
                 NSString *title = qualityLabels[i];
                 YTSettingsSectionItem *item = [YTSettingsSectionItemClass checkmarkItemWithTitle:title titleDescription:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
-                    [settingsViewController reloadData];
+                    [[self ytl_settingsViewController] reloadData];
                     ytlSetInt((int)arg1, @"wiFiQualityIndex");
                     return YES;
                 }];
@@ -543,7 +635,7 @@ static NSString *GetCacheSize() {
             }
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"SelectQuality") pickerSectionTitle:nil rows:rows selectedItemIndex:ytlInt(@"wiFiQualityIndex") parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:wifiQuality];
@@ -561,7 +653,7 @@ static NSString *GetCacheSize() {
             for (NSUInteger i = 0; i < qualityLabels.count; i++) {
                 NSString *title = qualityLabels[i];
                 YTSettingsSectionItem *item = [YTSettingsSectionItemClass checkmarkItemWithTitle:title titleDescription:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
-                    [settingsViewController reloadData];
+                    [[self ytl_settingsViewController] reloadData];
                     ytlSetInt((int)arg1, @"cellQualityIndex");
                     return YES;
                 }];
@@ -569,7 +661,7 @@ static NSString *GetCacheSize() {
             }
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"SelectQuality") pickerSectionTitle:nil rows:rows selectedItemIndex:ytlInt(@"cellQualityIndex") parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:cellQuality];
@@ -587,7 +679,7 @@ static NSString *GetCacheSize() {
             for (NSUInteger i = 0; i < tabLabels.count; i++) {
                 NSString *title = tabLabels[i];
                 YTSettingsSectionItem *item = [YTSettingsSectionItemClass checkmarkItemWithTitle:title titleDescription:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
-                    [settingsViewController reloadData];
+                    [[self ytl_settingsViewController] reloadData];
                     ytlSetInt((int)arg1, @"pivotIndex");
                     return YES;
                 }];
@@ -595,7 +687,7 @@ static NSString *GetCacheSize() {
             }
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"Startup") pickerSectionTitle:nil rows:rows selectedItemIndex:ytlInt(@"pivotIndex") parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:startup];
@@ -619,7 +711,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"About") pickerSectionTitle:LOC(@"Credits") rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:thanks];
@@ -636,7 +728,7 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"About") pickerSectionTitle:LOC(@"Credits") rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:sources];
@@ -674,14 +766,26 @@ static NSString *GetCacheSize() {
             ];
 
             YTSettingsPickerViewController *picker = [[%c(YTSettingsPickerViewController) alloc] initWithNavTitle:LOC(@"About") pickerSectionTitle:nil rows:rows selectedItemIndex:NSNotFound parentResponder:[self parentResponder]];
-            [settingsViewController pushViewController:picker];
+            YTLitePushPicker(self, picker);
             return YES;
         }];
     [sectionItems addObject:version];
 
-    BOOL isNew = [settingsViewController respondsToSelector:@selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)];
-    isNew ? [settingsViewController setSectionItems:sectionItems forCategory:YTLiteSection title:@"YTLite" icon:nil titleDescription:nil headerHidden:NO]
-          : [settingsViewController setSectionItems:sectionItems forCategory:YTLiteSection title:@"YTLite" titleDescription:nil headerHidden:NO];
+    YTSettingsViewController *settingsVC = settingsViewController ?: [self ytl_settingsViewController];
+    id settingsIcon = nil;
+    if (%c(YTIIcon)) {
+        id ytIcon = [%c(YTIIcon) new];
+        if ([ytIcon respondsToSelector:@selector(setIconType:)]) {
+            [ytIcon setValue:@(44) forKey:@"iconType"];
+        }
+        settingsIcon = ytIcon;
+    }
+
+    if ([settingsVC respondsToSelector:@selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)]) {
+        [settingsVC setSectionItems:sectionItems forCategory:YTLiteSection title:@"YTLite" icon:settingsIcon titleDescription:nil headerHidden:NO];
+    } else if ([settingsVC respondsToSelector:@selector(setSectionItems:forCategory:title:titleDescription:headerHidden:)]) {
+        [settingsVC setSectionItems:sectionItems forCategory:YTLiteSection title:@"YTLite" titleDescription:nil headerHidden:NO];
+    }
 }
 
 - (void)updateSectionForCategory:(NSUInteger)category withEntry:(id)entry {
@@ -706,3 +810,30 @@ static NSString *GetCacheSize() {
     return image;
 }
 %end
+
+%hook YTSettingsViewController
+
+- (void)setSectionItems:(NSMutableArray *)sectionItems forCategory:(NSInteger)category title:(NSString *)title icon:(id)icon titleDescription:(NSString *)titleDescription headerHidden:(BOOL)headerHidden {
+    if (category == YTLiteSection && icon == nil && %c(YTIIcon)) {
+        id ytIcon = [%c(YTIIcon) new];
+        if ([ytIcon respondsToSelector:@selector(setIconType:)]) {
+            [ytIcon setValue:@(44) forKey:@"iconType"];
+        }
+        icon = ytIcon;
+    }
+    %orig(sectionItems, category, title, icon, titleDescription, headerHidden);
+}
+
+%end
+
+%ctor {
+    %init;
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidFinishLaunchingNotification object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
+        if ([%c(YTSettingsGroupData) respondsToSelector:@selector(tweaks)]) {
+            NSMutableArray *tweaks = [%c(YTSettingsGroupData) tweaks];
+            if (tweaks && ![tweaks containsObject:@(YTLiteSection)]) {
+                [tweaks insertObject:@(YTLiteSection) atIndex:0];
+            }
+        }
+    }];
+}

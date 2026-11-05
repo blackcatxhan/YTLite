@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <Photos/Photos.h>
+#import <objc/runtime.h>
 #import "Utils/NSBundle+YTLite.h"
 #import "Utils/YTLUserDefaults.h"
 #import "Utils/Reachability.h"
@@ -8,6 +9,20 @@
 #import "Utils/YTPDownloader.h"
 #import "Utils/YTPDownloadsVC.h"
 #import "YouTubeHeaders.h"
+
+@interface YTSettingsGroupData : NSObject
+@property (nonatomic, readonly, strong) NSString *title;
+@property (nonatomic, readonly, assign) NSUInteger type;
+@property (nonatomic, readonly, strong) NSArray <NSNumber *> *orderedCategories;
++ (NSMutableArray <NSNumber *> *)tweaks;
+- (instancetype)initWithGroupType:(NSUInteger)groupType;
+- (NSString *)titleForSettingGroupType:(NSUInteger)groupType;
+- (NSArray <NSNumber *> *)orderedCategoriesForGroupType:(NSUInteger)groupType;
+@end
+
+@interface YTIIcon : NSObject
+@property (nonatomic, assign, readwrite) int iconType;
+@end
 
 #define LOC(key) [NSBundle.ytl_defaultBundle localizedStringForKey:key value:nil table:nil]
 
